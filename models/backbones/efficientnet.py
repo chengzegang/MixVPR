@@ -3,12 +3,14 @@ import torch.nn as nn
 import timm
 import numpy as np
 
+
 class EfficientNet(nn.Module):
-    def __init__(self,
-                 model_name='efficientnet_b0',
-                 pretrained=True,
-                 layers_to_freeze=4,
-                 ):
+    def __init__(
+        self,
+        model_name="efficientnet_b0",
+        pretrained=True,
+        layers_to_freeze=4,
+    ):
         """Class representing the EfficientNet backbone used in the pipeline
         EfficientNet contains 7 efficient blocks (0 to 6),
         we don't take into account the global pooling and the last fc
@@ -22,7 +24,7 @@ class EfficientNet(nn.Module):
         self.model_name = model_name
         self.layers_to_freeze = layers_to_freeze
         self.model = timm.create_model(model_name=model_name, pretrained=pretrained)
-        
+
         # freeze only if the model is pretrained
         if pretrained:
             if layers_to_freeze >= 0:
@@ -40,16 +42,16 @@ class EfficientNet(nn.Module):
 
         self.model.global_pool = None
         self.model.fc = None
-        
-        out_channels = 1280 # for b0 and b1
-        if 'b2' in model_name:
+
+        out_channels = 1280  # for b0 and b1
+        if "b2" in model_name:
             out_channels = 1408
-        elif 'b3' in model_name:
+        elif "b3" in model_name:
             out_channels = 1536
-        elif 'b4' in model_name:
+        elif "b4" in model_name:
             out_channels = 1792
         self.out_channels = out_channels
-        
+
     def forward(self, x):
         x = self.model.forward_features(x)
         return x
@@ -58,16 +60,17 @@ class EfficientNet(nn.Module):
 def print_nb_params(m):
     model_parameters = filter(lambda p: p.requires_grad, m.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
-    print(f'Trainable parameters: {params/1e6:.3}M')
+    print(f"Trainable parameters: {params/1e6:.3}M")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     x = torch.randn(4, 3, 320, 320)
-    m = EfficientNet(model_name='efficientnet_b0',
-                  pretrained=True,
-                  layers_to_freeze=0,
-                )
+    m = EfficientNet(
+        model_name="efficientnet_b0",
+        pretrained=True,
+        layers_to_freeze=0,
+    )
     r = m(x)
     print_nb_params(m)
-    print(f'Input shape is {x.shape}')
-    print(f'Output shape is {r.shape}')
+    print(f"Input shape is {x.shape}")
+    print(f"Output shape is {r.shape}")

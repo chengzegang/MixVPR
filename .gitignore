@@ -1,4 +1,43 @@
+# Python
+*.py[cod]
+*.pyo
+*.pyd
 __pycache__
+*.so
+*.egg
+*.egg-info
+dist
+build
+*.tar.gz
+
+# Directories
+bin/
+include/
+lib/
+lib64/
+share/
+
+# Logs
+*.log
+
+# Runtime data
+*.pid
+*.seed
+*.pid.lock
+
+# Development environment
+*.venv
+.env
+.venv/
+ENV/
+
+# Jupyter Notebook
 .ipynb_checkpoints
-LOGS
-venv
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+venv/
+wandb/
