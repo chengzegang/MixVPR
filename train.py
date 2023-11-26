@@ -283,7 +283,7 @@ def train(
     dataset = MixVPRVisualPlace.from_visual_place(dataset, transform=t)
     print(dataset)
     dl = DataLoader(
-        dataset, batch_size=32, shuffle=True, num_workers=8, collate_fn=collate_fn
+        dataset, batch_size=32, shuffle=True, num_workers=1, collate_fn=collate_fn
     )
     step = 0
     for epoch in range(epochs):
@@ -323,14 +323,13 @@ if __name__ == "__main__":
         "dataset_name": "nordland",
         "root": "/mnt/f/datasets/nordland_scenes/train",
     }
-    msls = {"dataset_name": "msls", "root": "/mnt/f/datasets/msls/train_val"}
+    msls = {"dataset_name": "msls", "root": "/mnt/f/datasets/MSLS/train_val"}
 
     kitti360 = {
         "dataset_name": "kitti360",
         "root": "/mnt/f/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
     }
 
-    mp.set_start_method("forkserver")
     config = dict(
         # ---- Encoder
         **msls,

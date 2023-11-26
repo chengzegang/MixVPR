@@ -79,12 +79,11 @@ class VisualPlace(Dataset):
         place = self.data.loc[self.data.id == place_id].iloc[0].to_dict()
         place["sadj"] = [self.data.iloc[i].to_dict() for i in place["sadj"]]
         place["tadj"] = [self.data.iloc[i].to_dict() for i in place["tadj"]]
-        print(place)
         return place
 
     def __add__(self, other: "VisualPlace") -> "VisualPlace":
         df1 = self.data
-        df2 = other.data.copy()
+        df2 = other.data
         df2["id"] = df2["id"].apply(lambda x: x + len(df1))
         df2["sadj"] = df2["sadj"].apply(lambda x: [i + len(df1) for i in x])
         df2["tadj"] = df2["tadj"].apply(lambda x: [i + len(df1) for i in x])
@@ -249,7 +248,7 @@ def build_nordland_parquet(root: str, **kwargs):
 def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
     postprocessed = os.path.join(path, "database", "postprocessed.csv")
     seq_info = os.path.join(path, "database", "seq_info.csv")
-    image_folder = os.path.join(path, "images")
+    image_folder = os.path.join(path, "database", "images")
     df_postprocessed = pd.read_csv(postprocessed, index_col=0)
     df_seq_info = pd.read_csv(seq_info, index_col=0)
 
