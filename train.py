@@ -323,6 +323,8 @@ if __name__ == "__main__":
         "dataset_name": "nordland",
         "root": "/mnt/f/datasets/nordland_scenes/train",
     }
+    msls = {"dataset_name": "msls", "root": "/mnt/f/datasets/msls/train_val"}
+
     kitti360 = {
         "dataset_name": "kitti360",
         "root": "/mnt/f/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
@@ -331,7 +333,7 @@ if __name__ == "__main__":
     mp.set_start_method("forkserver")
     config = dict(
         # ---- Encoder
-        **nordland,
+        **msls,
         backbone_arch="resnet50",
         pretrained=True,
         layers_to_freeze=2,

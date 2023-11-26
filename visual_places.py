@@ -48,11 +48,12 @@ class VisualPlace(Dataset):
         coords = np.asarray(coords).astype(np.float64)
         coords = torch.from_numpy(coords)
         ts = np.asarray(ts)
+        ts = torch.from_numpy(ts)
         d = cdist(coords, coords)
         sadj = d <= spatial_radius
-        np.fill_diagonal(sadj, False)
-        tadj = np.abs(ts[:, None] - ts[None, :]) <= temporal_radius
-        np.fill_diagonal(tadj, False)
+        torch.fill_diagonal(sadj, False)
+        tadj = cdist(ts.view(-1, 1), ts.view(-1, 1)) <= temporal_radius
+        torch.fill_diagonal(tadj, False)
         buff = io.StringIO()
         with jl.Writer(buff) as writer:
             for i, path in enumerate(paths):
@@ -245,8 +246,57 @@ def build_nordland_parquet(root: str, **kwargs):
     return dataset
 
 
+def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
+    postprocessed = os.path.join(path, "database", "postprocessed.csv")
+    seq_info = os.path.join(path, "database", "seq_info.csv")
+    image_folder = os.path.join(path, "images")
+    df_postprocessed = pd.read_csv(postprocessed, index_col=0)
+    df_seq_info = pd.read_csv(seq_info, index_col=0)
+
+    spatial_groups = df_postprocessed.groupby("unique_cluster").groups
+    temporal_groups = df_seq_info.groupby("sequence_key").groups
+
+    paths = (
+        df_postprocessed["key"]
+        .apply(lambda x: os.path.join(image_folder, x + ".jpg"))
+        .tolist()
+    )
+    sadj = (
+        df_postprocessed["unique_cluster"]
+        .apply(lambda x: spatial_groups[x].tolist())
+        .tolist()
+    )
+    tadj = df_seq_info["sequence_key"].apply(lambda x: temporal_groups[x])
+    frame_number = df_seq_info["frame_number"]
+
+    for i, ta in tadj.items():
+        filtered_ta = []
+        for t in ta:
+            if abs(frame_number[t] - frame_number[i]) <= temporal_radius:
+                filtered_ta.append(t)
+        tadj[i] = filtered_ta
+
+    index = np.arange(len(paths))
+    mapping = dict(zip(df_seq_info.index, index))
+    tadj = tadj.apply(lambda x: [mapping[i] for i in x])
+    tadj.tolist()
+    data = pd.DataFrame({"id": index, "path": paths, "sadj": sadj, "tadj": tadj})
+    data = VisualPlace(data, **kwargs)
+    return data
+
+
 def build_msls_parquet(root: str, **kwargs):
-    pass
+    datasets = []
+    for city in os.listdir(root):
+        city_path = os.path.join(root, city)
+        if os.path.isfile(city_path):
+            continue
+        dataset = build_msls_city(city_path, **kwargs)
+        datasets.append(dataset)
+    dataset = datasets[0]
+    for d in datasets[1:]:
+        dataset = dataset + d
+    return dataset
 
 
 def build_one_kitti360_parquet(root: str, **kwargs):
