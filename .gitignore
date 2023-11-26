@@ -41,3 +41,10 @@ ENV/
 .vscode/
 venv/
 wandb/
+torch/
+kitti360/
+msls/
+nyuvpr360/
+nordland/
+*.out
+*.sbatch
