@@ -280,17 +280,20 @@ def train(
         ]
     )
     dataset = get_visual_place(dataset_name, root, transform=t)
-    dataset = MixVPRVisualPlace.from_visual_place(dataset, transform=t)
-    print(dataset)
-    dl = DataLoader(
-        dataset, batch_size=32, shuffle=True, num_workers=1, collate_fn=collate_fn
-    )
     step = 0
     for epoch in range(epochs):
         result = eval_fn(
             model,
-            VisualPlaceImage.from_visual_place(dataset.sample(5000), transform=t),
+            VisualPlaceImage.from_visual_place(dataset.sample(1000), transform=t),
             device="cuda",
+        )
+        dataset = MixVPRVisualPlace.from_visual_place(dataset, transform=t)
+        dl = DataLoader(
+            MixVPRVisualPlace.from_visual_place(dataset.sample(2000), transform=t),
+            batch_size=32,
+            shuffle=True,
+            num_workers=16,
+            collate_fn=collate_fn,
         )
         print(result)
         wandb.log(result, step=epoch)
@@ -332,7 +335,7 @@ if __name__ == "__main__":
 
     config = dict(
         # ---- Encoder
-        **msls,
+        **nyuvpr360,
         backbone_arch="resnet50",
         pretrained=True,
         layers_to_freeze=2,

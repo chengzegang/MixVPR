@@ -23,10 +23,16 @@ import tempfile
 class VisualPlace(Dataset):
     def __init__(self, data: pd.DataFrame, **kwargs):
         super().__init__()
-        self.data = data
+        self.temp = tempfile.NamedTemporaryFile(delete=False)
+        data.to_parquet(self.temp.name, index=False)
+
         self._keys = list(kwargs.keys())
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+    @property
+    def data(self):
+        return pd.read_parquet(self.temp.name)
 
     @classmethod
     def from_visual_place(cls, visual_place: "VisualPlace", **kwargs):
