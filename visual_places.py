@@ -56,10 +56,11 @@ class VisualPlace(Dataset):
         ts = np.asarray(ts)
         ts = torch.from_numpy(ts)
         d = cdist(coords, coords)
-        sadj = d <= spatial_radius
-        torch.fill_diagonal(sadj, False)
-        tadj = cdist(ts.view(-1, 1), ts.view(-1, 1)) <= temporal_radius
-        torch.fill_diagonal(tadj, False)
+        sadj = d.as_tensor().le(spatial_radius)
+        sadj.fill_diagonal_(False)
+        ts = ts.view(-1, 1).float()
+        tadj = cdist(ts, ts).as_tensor().le(temporal_radius)
+        tadj.fill_diagonal_(False)
         buff = io.StringIO()
         with jl.Writer(buff) as writer:
             for i, path in enumerate(paths):
@@ -142,7 +143,11 @@ class VisualPlace(Dataset):
         )
 
     def sample(self, size: int):
-        df = self.data.sample(size, ignore_index=True)
+        df = None
+        if self.data.shape[0] <= size:
+            df = self.data.sample(size, replace=True, ignore_index=True)
+        else:
+            df = self.data.sample(size, ignore_index=True)
         df = df.reset_index()
         ids = df["id"].values
         inds = list(range(len(df)))

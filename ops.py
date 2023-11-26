@@ -50,9 +50,7 @@ def cdist(
         x_chunk = x_chunk.to(device)
         y_chunk = y_chunk.to(device)
         d = torch.cdist(x_chunk, y_chunk, compute_mode="donot_use_mm_for_euclid_dist")
-        if d.dtype != buff_d.dtype:
-            buff_d = buff_d.to(dtype=d.dtype)
-
+        d = d.to(buff_d.dtype)
         changed = False
         if x_ptr + x_chunk.shape[0] > buff_x_len:
             buff_x_len *= 2
