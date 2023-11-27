@@ -284,16 +284,16 @@ def train(
         ]
     )
     dataset = get_visual_place(dataset_name, root, transform=t)
+    dl = DataLoader(
+        MixVPRVisualPlace.from_visual_place(dataset, transform=t),
+        batch_size=8,
+        shuffle=True,
+        num_workers=8,
+        collate_fn=collate_fn,
+    )
     step = 0
     os.makedirs(dataset_name, exist_ok=True)
     for epoch in range(epochs):
-        dl = DataLoader(
-            MixVPRVisualPlace.from_visual_place(dataset, transform=t),
-            batch_size=32,
-            shuffle=True,
-            num_workers=2,
-            collate_fn=collate_fn,
-        )
         # result = eval_fn(
         #    model,
         #    VisualPlaceImage.from_visual_place(dataset.sample(3000), transform=t),
@@ -324,6 +324,8 @@ def train(
 
 if __name__ == "__main__":
     import torch.multiprocessing as mp
+
+    mp.set_start_method("fork")
 
     nyuvpr360 = {"dataset_name": "nyuvpr360", "root": "/mnt/d/datasets/nyuvpr/run_0"}
     nordland = {
