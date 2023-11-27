@@ -1,4 +1,5 @@
 import ast
+from functools import partial
 import glob
 import os
 from typing import List
@@ -18,21 +19,32 @@ from torch import Tensor
 import torchvision.transforms.functional as TF
 from tensordict import MemmapTensor
 import tempfile
+from tqdm.auto import tqdm
+
+
+class ConcatVisualPlace(Dataset):
+    def __init__(self, *places: "VisualPlace"):
+        super().__init__()
+        self.places = places
+        self._id_map = {}
+        accum_size = 0
+        for p in self.places:
+            self._id_map.update(
+                {i + accum_size: partial(p.__getitem__, i) for i in range(len(p))}
+            )
+            accum_size += len(p)
+
+    def __getitem__(self, id: int) -> dict:
+        return self._id_map[id]()
 
 
 class VisualPlace(Dataset):
     def __init__(self, data: pd.DataFrame, **kwargs):
         super().__init__()
-        self.temp = tempfile.NamedTemporaryFile(delete=False)
-        data.to_parquet(self.temp.name, index=False)
-
+        self.data = data
         self._keys = list(kwargs.keys())
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-    @property
-    def data(self):
-        return pd.read_parquet(self.temp.name)
 
     @classmethod
     def from_visual_place(cls, visual_place: "VisualPlace", **kwargs):
@@ -61,9 +73,9 @@ class VisualPlace(Dataset):
         ts = ts.view(-1, 1).float()
         tadj = cdist(ts, ts).as_tensor().le(temporal_radius)
         tadj.fill_diagonal_(False)
-        buff = io.StringIO()
-        with jl.Writer(buff) as writer:
-            for i, path in enumerate(paths):
+        temp = tempfile.NamedTemporaryFile(delete=False)
+        with jl.Writer(temp, flush=True, compact=True) as writer:
+            for i, path in enumerate(tqdm(paths)):
                 writer.write(
                     dict(
                         id=i,
@@ -72,8 +84,13 @@ class VisualPlace(Dataset):
                         tadj=torch.where(tadj[i])[0].tolist(),
                     )
                 )
-        buff.seek(0)
-        df = pd.read_json(buff, lines=True)
+        temp.seek(0)
+        df = pd.read_json(
+            temp,
+            lines=True,
+            dtype_backend="pyarrow",
+            engine="pyarrow",
+        )
         return cls(
             df,
             **kwargs,
@@ -89,19 +106,7 @@ class VisualPlace(Dataset):
         return place
 
     def __add__(self, other: "VisualPlace") -> "VisualPlace":
-        df1 = self.data
-        df2 = other.data
-        df2["id"] = df2["id"].apply(lambda x: x + len(df1))
-        df2["sadj"] = df2["sadj"].apply(lambda x: [i + len(df1) for i in x])
-        df2["tadj"] = df2["tadj"].apply(lambda x: [i + len(df1) for i in x])
-        df = pd.concat([df1, df2], ignore_index=True)
-        return self.__class__(df, **self.__dict__.fromkeys(self._keys))
-
-    def __radd__(self, other: "VisualPlace") -> "VisualPlace":
-        return self.__add__(other)
-
-    def __iadd__(self, other: "VisualPlace") -> "VisualPlace":
-        return self.__add__(other)
+        return ConcatVisualPlace(self, other)
 
     @property
     def sadj(self) -> MemmapTensor:

@@ -24,7 +24,7 @@ def _cdist_collate_fn(batch):
 def cdist(
     x: Iterable[Tensor],
     y: Iterable[Tensor],
-    buff_size: int = 65536,
+    buff_size: int = 8192,
     chunk_size: int = 8192,
     device: str = "cuda",
 ) -> Tensor:
@@ -62,7 +62,7 @@ def cdist(
             buff_d = _new_copy(buff_d, (buff_x_len, buff_y_len))
         buff_d[
             x_ptr : x_ptr + x_chunk.shape[0], y_ptr : y_ptr + y_chunk.shape[0]
-        ] = MemmapTensor.from_tensor(d).memmap_()
+        ] = MemmapTensor.from_tensor(d)
         x_ptr += x_chunk.shape[0]
         y_ptr += y_chunk.shape[0]
 

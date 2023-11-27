@@ -266,7 +266,7 @@ def train(
     model.backbone.requires_grad_(False)
     model.load_state_dict(
         torch.load(
-            "/scratch/zc2309/MixVPR/checkpoints/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
+            "/home/zc2309/workspace/MixVPR/checkpoints/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
         )
     )
     model = model.to(memory_format=torch.channels_last).to("cuda")
@@ -284,30 +284,20 @@ def train(
         ]
     )
     dataset = get_visual_place(dataset_name, root, transform=t)
-    print(dataset)
-
     step = 0
     os.makedirs(dataset_name, exist_ok=True)
     for epoch in range(epochs):
         dl = DataLoader(
-            MixVPRVisualPlace.from_visual_place(dataset.sample(10000), transform=t),
+            MixVPRVisualPlace.from_visual_place(dataset, transform=t),
             batch_size=32,
             shuffle=True,
-            num_workers=1,
+            num_workers=8,
             collate_fn=collate_fn,
         )
         result = eval_fn(
             model,
-            VisualPlaceImage.from_visual_place(dataset.sample(2000), transform=t),
+            VisualPlaceImage.from_visual_place(dataset.sample(1000), transform=t),
             device="cuda",
-        )
-        dataset = MixVPRVisualPlace.from_visual_place(dataset, transform=t)
-        dl = DataLoader(
-            MixVPRVisualPlace.from_visual_place(dataset.sample(2000), transform=t),
-            batch_size=32,
-            shuffle=True,
-            num_workers=16,
-            collate_fn=collate_fn,
         )
         print(result)
         wandb.log(result, step=epoch)
@@ -335,30 +325,30 @@ def train(
 if __name__ == "__main__":
     import torch.multiprocessing as mp
 
-    nyuvpr360 = {"dataset_name": "nyuvpr360", "root": "/datasets/run_0"}
+    nyuvpr360 = {"dataset_name": "nyuvpr360", "root": "/mnt/d/datasets/nyuvpr/run_0"}
     nordland = {
         "dataset_name": "nordland",
         "root": "/datasets/nordland_scenes/train",
     }
-    msls = {"dataset_name": "msls", "root": "/datasets/mapillary_sls/train_val"}
+    msls = {"dataset_name": "msls", "root": "/mnt/f/datasets/MSLS/train_val"}
 
     kitti360 = {
         "dataset_name": "kitti360",
-        "root": "/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
+        "root": "/mnt/f/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
     }
     import sys
 
-    choice = sys.argv[1]
-
-    data_config = None
-    if choice == "nyuvpr360":
-        data_config = nyuvpr360
-    elif choice == "nordland":
-        data_config = nordland
-    elif choice == "msls":
-        data_config = msls
-    elif choice == "kitti360":
-        data_config = kitti360
+    # choice = sys.argv[1]
+    #
+    # data_config = None
+    # if choice == "nyuvpr360":
+    #    data_config = nyuvpr360
+    # elif choice == "nordland":
+    #    data_config = nordland
+    # elif choice == "msls":
+    #    data_config = msls
+    # elif choice == "kitti360":
+    #    data_config = kitti360
     config = dict(
         # ---- Encoder
         **nyuvpr360,
