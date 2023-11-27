@@ -291,16 +291,16 @@ def train(
             MixVPRVisualPlace.from_visual_place(dataset, transform=t),
             batch_size=32,
             shuffle=True,
-            num_workers=8,
+            num_workers=2,
             collate_fn=collate_fn,
         )
-        result = eval_fn(
-            model,
-            VisualPlaceImage.from_visual_place(dataset.sample(1000), transform=t),
-            device="cuda",
-        )
-        print(result)
-        wandb.log(result, step=epoch)
+        # result = eval_fn(
+        #    model,
+        #    VisualPlaceImage.from_visual_place(dataset.sample(3000), transform=t),
+        #    device="cuda",
+        # )
+        # print(result)
+        # wandb.log(result, step=epoch)
         for i, batch in enumerate(pbar := tqdm(dl)):
             model.train()
             images = batch["images"].to("cuda")

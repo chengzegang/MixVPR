@@ -22,22 +22,6 @@ import tempfile
 from tqdm.auto import tqdm
 
 
-class ConcatVisualPlace(Dataset):
-    def __init__(self, *places: "VisualPlace"):
-        super().__init__()
-        self.places = places
-        self._id_map = {}
-        accum_size = 0
-        for p in self.places:
-            self._id_map.update(
-                {i + accum_size: partial(p.__getitem__, i) for i in range(len(p))}
-            )
-            accum_size += len(p)
-
-    def __getitem__(self, id: int) -> dict:
-        return self._id_map[id]()
-
-
 class VisualPlace(Dataset):
     def __init__(self, data: pd.DataFrame, **kwargs):
         super().__init__()
@@ -61,6 +45,7 @@ class VisualPlace(Dataset):
         ts: np.ndarray,
         spatial_radius: float,
         temporal_radius: float,
+        id_offset: int = 0,
         **kwargs,
     ):
         coords = np.asarray(coords).astype(np.float64)
@@ -76,20 +61,22 @@ class VisualPlace(Dataset):
         temp = tempfile.NamedTemporaryFile(delete=False)
         with jl.Writer(temp, flush=True, compact=True) as writer:
             for i, path in enumerate(tqdm(paths)):
+                i_sadj = torch.where(sadj[i])[0] + id_offset
+                i_tadj = torch.where(tadj[i])[0] + id_offset
                 writer.write(
                     dict(
-                        id=i,
+                        id=i + id_offset,
                         path=path,
-                        sadj=torch.where(sadj[i])[0].tolist(),
-                        tadj=torch.where(tadj[i])[0].tolist(),
+                        sadj=i_sadj.tolist(),
+                        tadj=i_tadj.tolist(),
                     )
                 )
         temp.seek(0)
         df = pd.read_json(
             temp,
             lines=True,
-            dtype_backend="pyarrow",
             engine="pyarrow",
+            dtype_backend="pyarrow",
         )
         return cls(
             df,
@@ -106,7 +93,8 @@ class VisualPlace(Dataset):
         return place
 
     def __add__(self, other: "VisualPlace") -> "VisualPlace":
-        return ConcatVisualPlace(self, other)
+        data = pd.concat([self.data, other.data], ignore_index=True)
+        return self.__class__(data, **self.__dict__.fromkeys(self._keys))
 
     @property
     def sadj(self) -> MemmapTensor:
@@ -261,7 +249,7 @@ def build_nordland_parquet(root: str, **kwargs):
     return dataset
 
 
-def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
+def build_msls_city(path: str, temporal_radius: float = 5.0, offset=0, **kwargs):
     postprocessed = os.path.join(path, "database", "postprocessed.csv")
     seq_info = os.path.join(path, "database", "seq_info.csv")
     image_folder = os.path.join(path, "database", "images")
@@ -278,7 +266,7 @@ def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
     )
     sadj = (
         df_postprocessed["unique_cluster"]
-        .apply(lambda x: spatial_groups[x].tolist())
+        .apply(lambda x: (spatial_groups[x].to_numpy() + offset).tolist())
         .tolist()
     )
     tadj = df_seq_info["sequence_key"].apply(lambda x: temporal_groups[x])
@@ -288,10 +276,10 @@ def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
         filtered_ta = []
         for t in ta:
             if abs(frame_number[t] - frame_number[i]) <= temporal_radius:
-                filtered_ta.append(t)
+                filtered_ta.append(t + offset)
         tadj[i] = filtered_ta
 
-    index = np.arange(len(paths))
+    index = np.arange(len(paths)) + offset
     mapping = dict(zip(df_seq_info.index, index))
     tadj = tadj.apply(lambda x: [mapping[i] for i in x])
     tadj.tolist()
@@ -302,12 +290,14 @@ def build_msls_city(path: str, temporal_radius: float = 5.0, **kwargs):
 
 def build_msls_parquet(root: str, **kwargs):
     datasets = []
+    offset = 0
     for city in os.listdir(root):
         city_path = os.path.join(root, city)
         if os.path.isfile(city_path):
             continue
-        dataset = build_msls_city(city_path, **kwargs)
+        dataset = build_msls_city(city_path, offset=offset, **kwargs)
         datasets.append(dataset)
+        offset += len(dataset)
     dataset = datasets[0]
     for d in datasets[1:]:
         dataset = dataset + d

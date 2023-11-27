@@ -24,7 +24,7 @@ def _cdist_collate_fn(batch):
 def cdist(
     x: Iterable[Tensor],
     y: Iterable[Tensor],
-    buff_size: int = 8192,
+    buff_size: int = 65536,
     chunk_size: int = 8192,
     device: str = "cuda",
 ) -> Tensor:

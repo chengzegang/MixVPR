@@ -5,7 +5,7 @@ from tensordict import MemmapTensor
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch import Tensor, nn
 from ops import cdist
-
+from tqdm.auto import tqdm
 from visual_places import MixVPRVisualPlace, VisualPlaceImage
 
 
@@ -26,7 +26,7 @@ def extract(
     dl = DataLoader(
         data,
         batch_size=64,
-        num_workers=os.getenv("N_WORKERS", 4),
+        num_workers=os.getenv("N_WORKERS", 16),
         collate_fn=collate_fn,
     )
 
@@ -36,7 +36,7 @@ def extract(
     features = MemmapTensor(len(data), feat_size, dtype=torch.float32, device="cpu")
     last_i = 0
     with torch.no_grad():
-        for batch in dl:
+        for batch in tqdm(dl):
             out = model(batch["image"].to(device))
             features[last_i : last_i + out.shape[0]] = out.cpu()
             last_i += out.shape[0]
