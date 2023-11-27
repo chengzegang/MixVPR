@@ -323,20 +323,18 @@ def train(
 
 
 if __name__ == "__main__":
-    import torch.multiprocessing as mp
+    
 
-    mp.set_start_method("fork")
-
-    nyuvpr360 = {"dataset_name": "nyuvpr360", "root": "/mnt/d/datasets/nyuvpr/run_0"}
+    nyuvpr360 = {"dataset_name": "nyuvpr360", "root": "/datasets/run_0"}
     nordland = {
         "dataset_name": "nordland",
         "root": "/datasets/nordland_scenes/train",
     }
-    msls = {"dataset_name": "msls", "root": "/mnt/f/datasets/MSLS/train_val"}
+    msls = {"dataset_name": "msls", "root": "/datasets/MSLS/train_val"}
 
     kitti360 = {
         "dataset_name": "kitti360",
-        "root": "/mnt/f/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
+        "root": "/datasets/kitti360_scenes/2013_05_28_drive_0009_sync",
     }
     import sys
 
