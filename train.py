@@ -21,7 +21,7 @@ from evaluate import eval_fn
 from visual_places import VisualPlaceImage
 import wandb
 
-
+from datetime import datetime
 def get_backbone(
     backbone_arch="resnet50",
     pretrained=True,
@@ -248,8 +248,8 @@ def train(
     hostname = os.uname()[1]
     wandb.init(
         project="VPR",
-        name=f"MixVPR-{dataset_name}-{hostname}",
-        id=f"MixVPR-{dataset_name}-{hostname}",
+        name=f"MixVPR-{dataset_name}-{hostname}-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
+        id=f"MixVPR-{dataset_name}-{hostname}-{datetime.now().strftime('%Y%m%d-%H%M%S')}",
     )
     image_size = 320
     metric_fn = get_loss(loss_name)
@@ -266,7 +266,7 @@ def train(
     model.backbone.requires_grad_(False)
     model.load_state_dict(
         torch.load(
-            "/home/zc2309/workspace/MixVPR/checkpoints/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
+            "/scratch/zc2309/MixVPR/checkpoints/resnet50_MixVPR_4096_channels(1024)_rows(4).ckpt"
         )
     )
     model = model.to(memory_format=torch.channels_last).to("cuda")
